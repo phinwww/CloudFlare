@@ -175,6 +175,7 @@ logo.*
 # Custom directories
 cache/
 profiles/
+.idea/
 
 # Custom projects
 
