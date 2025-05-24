@@ -169,7 +169,6 @@ admtools
 *.bat
 
 *.js
-logo.*
 *.7z
 
 # Custom directories
