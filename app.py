@@ -83,7 +83,8 @@ def install_driver(env=None):
 
 if __name__ == '__main__':
     try:
-        ctypes.windll.kernel32.SetConsoleTitleW('CloudFlare-solver')
+        if os.name == 'nt':
+            ctypes.windll.kernel32.SetConsoleTitleW('CloudFlare-solver')
         print(LOGO)
 
         install_driver()
