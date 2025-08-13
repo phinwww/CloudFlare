@@ -53,7 +53,11 @@ class WindowGridManager:
                             width, height = resolution.split('x')
                             return int(width), int(height.split('+')[0])
                 return 1920, 1080
+<<<<<<< HEAD
+            except:
+=======
             except Exception:
+>>>>>>> 927b1542df0caff9f751a61c4c7a2ae56451a01b
                 return 1920, 1080
         elif system == "Darwin":
             try:
@@ -66,7 +70,11 @@ class WindowGridManager:
                         height = int(parts[3])
                         return width, height
                 return 1920, 1080
+<<<<<<< HEAD
+            except:
+=======
             except Exception:
+>>>>>>> 927b1542df0caff9f751a61c4c7a2ae56451a01b
                 return 1920, 1080
         else:
             return 1920, 1080
