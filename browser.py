@@ -33,12 +33,43 @@ class WindowGridManager:
 
     @staticmethod
     def get_screen_size():
-        user32 = ctypes.windll.user32
-        user32.SetProcessDPIAware()  # Обязательно для правильных размеров на экранах с масштабированием
-
-        screen_width = user32.GetSystemMetrics(0)
-        screen_height = user32.GetSystemMetrics(1)
-        return screen_width, screen_height
+        import platform
+        system = platform.system()
+        
+        if system == "Windows":
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
+            screen_width = user32.GetSystemMetrics(0)
+            screen_height = user32.GetSystemMetrics(1)
+            return screen_width, screen_height
+        elif system == "Linux":
+            try:
+                import subprocess
+                output = subprocess.check_output(['xrandr']).decode('utf-8')
+                for line in output.split('\n'):
+                    if ' connected ' in line and 'primary' in line:
+                        resolution = line.split()[3]
+                        if 'x' in resolution:
+                            width, height = resolution.split('x')
+                            return int(width), int(height.split('+')[0])
+                return 1920, 1080
+            except Exception:
+                return 1920, 1080
+        elif system == "Darwin":
+            try:
+                import subprocess
+                output = subprocess.check_output(['system_profiler', 'SPDisplaysDataType']).decode('utf-8')
+                for line in output.split('\n'):
+                    if 'Resolution:' in line:
+                        parts = line.strip().split()
+                        width = int(parts[1])
+                        height = int(parts[3])
+                        return width, height
+                return 1920, 1080
+            except Exception:
+                return 1920, 1080
+        else:
+            return 1920, 1080
 
     def _generate_grid(self):
         index = 0
@@ -249,12 +280,24 @@ class Browser:
                 return None
         return token
 
-    @staticmethod
-    def get_coords_to_click(page, x, y):
-        id_ = page._grid_position_id
-        pos = BrowserHandler().window_manager.grid[id_]
-        _x, _y = pos['x'], pos['y']
-        return _x + x + random.randint(5, 10), _y + y + random.randint(75, 85)
+    async def get_coords_to_click(self, x, y):
+        # Get the actual browser viewport position and window bounds
+        session = await self.page.context.new_cdp_session(self.page)
+        result = await session.send("Browser.getWindowForTarget")
+        window_id = result["windowId"]
+        bounds = await session.send("Browser.getWindowBounds", {"windowId": window_id})
+        
+        # Get viewport info to calculate content area offset
+        viewport = await self.page.evaluate("() => ({ x: window.screenX, y: window.screenY, innerHeight: window.innerHeight, outerHeight: window.outerHeight })")
+        
+        # Calculate browser chrome height (difference between outer and inner height)
+        chrome_height = viewport['outerHeight'] - viewport['innerHeight']
+        
+        # Calculate absolute screen coordinates
+        window_x = bounds['bounds']['left']
+        window_y = bounds['bounds']['top'] + chrome_height
+        
+        return window_x + x + random.randint(2, 5), window_y + y + random.randint(2, 5)
 
     async def check_for_checkbox(self):
         # 📸 Скриншот без сохранения в файл
@@ -277,7 +320,7 @@ class Browser:
             center_x = max_loc[0] + w // 2
             center_y = max_loc[1] + h // 2
             # await self.page.mouse.click(center_x, center_y)
-            x, y = self.get_coords_to_click(self.page, center_x, center_y)
+            x, y = await self.get_coords_to_click(center_x, center_y)
             pyautogui.click(x, y)
             # await self.human_click(center_x, center_y)
             # await self.cdp_click(center_x, center_y)
